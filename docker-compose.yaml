@@ -1,0 +1,46 @@
+version: "3.8"
+services:
+  radicale:
+    build:
+      context: .
+      dockerfile: radicale.dockerfile
+    image: illpillow/radicale:latest
+    container_name: "radicale"
+    volumes:
+      - type: bind
+        source: ./radicale.conf
+        target: /etc/radicale/config
+        read_only: true
+      - type: bind
+        source: ./radicale_data
+        target: /var/lib/radicale/collections
+    expose:
+      - "5232"
+    networks:
+      - radicale
+    restart: on-failure
+  nginx:
+    image: nginx:alpine
+    container_name: "radicale_nginx"
+    volumes:
+      - type: bind
+        source: ./nginx.conf
+        target: /etc/nginx/nginx.conf
+        read_only: true
+      - type: bind
+        source: ./htpasswd
+        target: /etc/nginx/htpasswd
+        read_only: true
+    ports:
+      - "8080:80/tcp"
+    networks:
+      - radicale
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--output", "/dev/null", "--show-error", "--silent", "http://localhost/index.html"]
+      interval: 5m
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    restart: on-failure
+networks:
+  radicale:
